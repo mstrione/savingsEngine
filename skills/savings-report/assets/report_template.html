@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Savings Engine — Reporte de oportunidades</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    --accent: #1f6f5c;
+    --accent-light: #e7f2ef;
+    --text: #1a1a1a;
+    --muted: #6b6b6b;
+    --border: #e2e2e2;
+    --bg: #ffffff;
+    --conf-alta: #1f6f5c;
+    --conf-media: #b98a00;
+    --conf-baja: #a33a3a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    margin: 0;
+    padding: 32px 40px 64px;
+  }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); margin-top: 0; margin-bottom: 28px; font-size: 13px; }
+  .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 32px; }
+  .kpi-card {
+    background: var(--accent-light);
+    border-radius: 8px;
+    padding: 16px 20px;
+    min-width: 160px;
+    flex: 1;
+  }
+  .kpi-card .value { font-size: 26px; font-weight: 700; color: var(--accent); }
+  .kpi-card .label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .filters { display: flex; gap: 12px; margin-bottom: 12px; font-size: 13px; }
+  .filters select { padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 36px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px;
+    color: #fff;
+  }
+  .badge.alta { background: var(--conf-alta); }
+  .badge.media { background: var(--conf-media); }
+  .badge.baja { background: var(--conf-baja); }
+  .charts { display: flex; gap: 32px; flex-wrap: wrap; margin-bottom: 32px; }
+  .chart-box { flex: 1; min-width: 280px; max-width: 420px; }
+  footer { font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 12px; margin-top: 24px; }
+</style>
+</head>
+<body>
+
+<h1>Savings Engine — Oportunidades de descuento</h1>
+<p class="subtitle" id="report-subtitle">Generado el —</p>
+
+<div class="kpi-row" id="kpi-row"></div>
+
+<div class="charts">
+  <div class="chart-box"><canvas id="chart-lever"></canvas></div>
+  <div class="chart-box"><canvas id="chart-confidence"></canvas></div>
+</div>
+
+<div class="filters">
+  <label>Categoría <select id="filter-category"><option value="">Todas</option></select></label>
+  <label>Palanca <select id="filter-lever"><option value="">Todas</option></select></label>
+  <label>Confianza <select id="filter-confidence"><option value="">Todas</option></select></label>
+</div>
+
+<table id="opps-table">
+  <thead>
+    <tr>
+      <th>Proveedor</th>
+      <th>Categoría</th>
+      <th>Palanca</th>
+      <th>Confianza</th>
+      <th>Evidencia</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<footer>
+  Los montos de ahorro estimado, cuando figuran, provienen directamente de los contratos
+  analizados — no son proyecciones del modelo. Reporte generado por el plugin Savings Engine.
+</footer>
+
+<script>
+// ------------------------------------------------------------------
+// DATA: al generar el reporte real, reemplazar este bloque completo
+// por el contenido de output/discount-opportunities/<fecha>.json
+// (o inyectarlo antes de servir el HTML). Se deja un ejemplo mínimo
+// para que el template sea renderizable standalone durante el desarrollo.
+// ------------------------------------------------------------------
+const REPORT_DATA = {
+  "generated_at": "2026-09-28",
+  "total_providers_analyzed": 0,
+  "total_opportunities": 0,
+  "opportunities": [
+    // { provider_id, provider_name, category, lever, rationale,
+    //   supporting_evidence: [...], confidence: "alta|media|baja" }
+  ]
+};
+// ------------------------------------------------------------------
+
+function render(data) {
+  document.getElementById("report-subtitle").textContent =
+    `Generado el ${data.generated_at} — ${data.total_providers_analyzed} proveedores analizados, ${data.total_opportunities} oportunidades`;
+
+  const kpiRow = document.getElementById("kpi-row");
+  const byConfidence = { alta: 0, media: 0, baja: 0 };
+  const byLever = {};
+  const byCategory = {};
+
+  data.opportunities.forEach(o => {
+    byConfidence[o.confidence] = (byConfidence[o.confidence] || 0) + 1;
+    byLever[o.lever] = (byLever[o.lever] || 0) + 1;
+    byCategory[o.category] = (byCategory[o.category] || 0) + 1;
+  });
+
+  const kpis = [
+    { label: "Proveedores analizados", value: data.total_providers_analyzed },
+    { label: "Oportunidades totales", value: data.total_opportunities },
+    { label: "Confianza alta", value: byConfidence.alta || 0 },
+    { label: "Categorías con oportunidades", value: Object.keys(byCategory).length },
+  ];
+  kpiRow.innerHTML = kpis.map(k => `
+    <div class="kpi-card">
+      <div class="value">${k.value}</div>
+      <div class="label">${k.label}</div>
+    </div>`).join("");
+
+  // Filtros
+  const categorySel = document.getElementById("filter-category");
+  const leverSel = document.getElementById("filter-lever");
+  const confSel = document.getElementById("filter-confidence");
+  [...new Set(data.opportunities.map(o => o.category))].sort().forEach(c => {
+    categorySel.innerHTML += `<option value="${c}">${c}</option>`;
+  });
+  [...new Set(data.opportunities.map(o => o.lever))].sort().forEach(l => {
+    leverSel.innerHTML += `<option value="${l}">${l}</option>`;
+  });
+  ["alta", "media", "baja"].forEach(c => {
+    confSel.innerHTML += `<option value="${c}">${c}</option>`;
+  });
+
+  function renderTable() {
+    const tbody = document.querySelector("#opps-table tbody");
+    const fc = categorySel.value, fl = leverSel.value, fco = confSel.value;
+    const rows = data.opportunities.filter(o =>
+      (!fc || o.category === fc) && (!fl || o.lever === fl) && (!fco || o.confidence === fco)
+    );
+    tbody.innerHTML = rows.map(o => `
+      <tr>
+        <td>${o.provider_name || o.provider_id}</td>
+        <td>${o.category}</td>
+        <td>${o.lever}</td>
+        <td><span class="badge ${o.confidence}">${o.confidence}</span></td>
+        <td>${(o.supporting_evidence || []).join(" · ")}</td>
+      </tr>`).join("") || `<tr><td colspan="5" style="color:var(--muted)">Sin oportunidades para este filtro.</td></tr>`;
+  }
+  [categorySel, leverSel, confSel].forEach(el => el.addEventListener("change", renderTable));
+  renderTable();
+
+  // Charts
+  new Chart(document.getElementById("chart-lever"), {
+    type: "bar",
+    data: {
+      labels: Object.keys(byLever),
+      datasets: [{ label: "Oportunidades por palanca", data: Object.values(byLever), backgroundColor: "#1f6f5c" }]
+    },
+    options: { plugins: { legend: { display: false } }, responsive: true }
+  });
+  new Chart(document.getElementById("chart-confidence"), {
+    type: "doughnut",
+    data: {
+      labels: Object.keys(byConfidence),
+      datasets: [{ data: Object.values(byConfidence), backgroundColor: ["#1f6f5c", "#b98a00", "#a33a3a"] }]
+    },
+    options: { responsive: true }
+  });
+}
+
+render(REPORT_DATA);
+</script>
+</body>
+</html>

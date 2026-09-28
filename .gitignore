@@ -1,0 +1,28 @@
+# Datos de referencia / cliente — nunca versionar
+/INPUT/
+
+# Config local (contiene rutas específicas de cada máquina/usuario)
+/config/config.json
+
+# Outputs generados en cada corrida (JSON de contratos, oportunidades, reportes, logs de email)
+/output/**
+!/output/.gitkeep
+!/output/**/.gitkeep
+
+# Documentos de datos (contratos, dossiers) por si se copian dentro del repo por error
+*.pdf
+*.docx
+*.pptx
+*.xlsx
+*.xls
+!skills/**/assets/*.html
+
+# Sistema / entornos
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+
+# Evals / workspaces de skill-creator si se usan localmente
+*-workspace/

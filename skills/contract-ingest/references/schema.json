@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ContractSummary",
+  "description": "Esquema v0 (draft) para el resumen JSON de un proveedor/contrato. Ver schema.md para la descripción completa de cada campo.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "provider_id",
+    "provider_name",
+    "category",
+    "documents",
+    "summary",
+    "source_folder",
+    "processed_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "provider_id": { "type": "string" },
+    "provider_name": { "type": "string" },
+    "category": { "type": "string" },
+    "contract_number": { "type": ["string", "null"] },
+    "effective_date": { "type": ["string", "null"], "format": "date" },
+    "expiration_date": { "type": ["string", "null"], "format": "date" },
+    "term_months": { "type": ["number", "null"] },
+    "renewal_type": { "enum": ["automatica", "manual", "desconocida"] },
+    "notice_period_days": { "type": ["number", "null"] },
+    "currency": { "type": ["string", "null"] },
+    "pricing_model": { "enum": ["fijo", "variable", "por_consumo", "mixto", "desconocido"] },
+    "total_value_estimate": { "type": ["number", "null"] },
+    "payment_terms_days": { "type": ["number", "null"] },
+    "volume_commitment": { "type": ["string", "null"] },
+    "key_clauses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["clause_type", "description", "source_document"],
+        "properties": {
+          "clause_type": { "type": "string" },
+          "description": { "type": "string" },
+          "source_document": { "type": "string" }
+        }
+      }
+    },
+    "modifications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["mod_number", "date", "document_file", "summary"],
+        "properties": {
+          "mod_number": { "type": "string" },
+          "date": { "type": ["string", "null"] },
+          "document_file": { "type": "string" },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    "documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file_name", "doc_type"],
+        "properties": {
+          "file_name": { "type": "string" },
+          "doc_type": {
+            "enum": ["contrato", "modificacion", "odc", "formulario_admin", "dossier_negociacion", "otro"]
+          },
+          "date": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "contacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "role"],
+        "properties": {
+          "name": { "type": "string" },
+          "role": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "flags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "summary": { "type": "string" },
+    "source_folder": { "type": "string" },
+    "processed_at": { "type": "string", "format": "date-time" }
+  }
+}

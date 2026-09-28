@@ -1,0 +1,9 @@
+{
+  "_comment": "Copiá este archivo a config/config.json y completá los valores. config.json está en .gitignore — nunca se sube al repo.",
+  "contracts_root": "/ruta/absoluta/a/tu/carpeta/de/Contratos",
+  "output_root": "output",
+  "company_context": {
+    "name": "",
+    "notes": "Contexto opcional que ayuda a los skills a redactar mejor (ej. nombre de la empresa que negocia, industria, moneda por defecto)."
+  }
+}
