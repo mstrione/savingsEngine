@@ -30,5 +30,10 @@ node_modules/
 # QA temporal de scripts (datos sintéticos, nunca material del plugin)
 /_tmp_qa/
 
-# Build artifact del plugin (se genera con `zip` para subir a Cowork/Customize, no es fuente)
+# Build artifact del plugin (se genera con `zip` para subir a Cowork/Customize, no es fuente).
+# Versionado por nombre de archivo (savings-engine-plugin-v<version>.zip), no por git — ver
+# "Versionado del .zip" en README.md. El patrón cubre tanto el nombre viejo sin versión como
+# cualquier build versionado.
 /savings-engine-plugin.zip
+/savings-engine-plugin-v*.zip
+/savings-engine-plugin/

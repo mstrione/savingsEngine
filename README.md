@@ -57,6 +57,26 @@ Si tu organización usa un marketplace interno de plugins (como en BCG), el mism
 fuente para ese registro — consultá con el equipo de GenAI Workspace de BCG el paso administrativo
 de publicarlo ahí (visibilidad Auto-install / Available / Not-available).
 
+### Versionado del `.zip`
+
+El `.zip` que se sube a Cowork/Customize se nombra con versión: `savings-engine-plugin-v<version>.zip`,
+donde `<version>` es el valor de `"version"` en `.claude-plugin/plugin.json`. Regla al armar un
+`.zip` nuevo:
+
+1. **Bumpeá `"version"` en `.claude-plugin/plugin.json`** antes de empaquetar — semver simple:
+   - `PATCH` (`1.1.2` → `1.1.3`): fix de bug o ajuste de wording/documentación en un skill, sin
+     agregar capacidades nuevas.
+   - `MINOR` (`1.1.2` → `1.2.0`): skill nuevo, modo nuevo dentro de un skill existente, o campo
+     nuevo en un esquema de datos (no rompe instalaciones existentes).
+   - `MAJOR` (`1.1.2` → `2.0.0`): cambio que rompe compatibilidad con datos/artefactos generados
+     por versiones anteriores (ej. un `microsite_data.json` viejo dejaría de funcionar).
+2. Nombrá el archivo `savings-engine-plugin-v<version>.zip` (ej. `savings-engine-plugin-v1.1.2.zip`).
+   No lo versiones en git — está en `.gitignore` (`/savings-engine-plugin-v*.zip`); el historial de
+   versiones del plugin vive en los commits + el número dentro de `plugin.json`, no en zips viejos
+   acumulados en el repo.
+3. Al subir un `.zip` con versión más nueva a Cowork/Customize, reemplaza la instalación anterior —
+   no hace falta desinstalar antes.
+
 ## Primera corrida — conectá tu carpeta de contratos y arrancá
 
 No hace falta editar nada a mano ni clonar este repo en tu máquina.
