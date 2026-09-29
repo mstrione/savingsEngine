@@ -1,6 +1,6 @@
 ---
 name: contract-ingest
-description: Lee contratos y adendas de proveedores (carpetas por categoría/proveedor: PDFs de contrato, adendas, órdenes de compra, formularios, dossiers) y produce un JSON consolidado por categoría (esquema v3, con trazabilidad fuente/confianza) más un Excel espejo. Dos modos: "iniciar" (Modo A, desde cero) y "refrescar" (Modo B, incremental por mtime/tamaño). Paso inicial y repetible del Savings Engine — úsalo cuando pidan "clasificar contratos", "analizar los contratos", "extraer los contratos", "ingestar contratos nuevos", "leer la carpeta de contratos", "refrescar el análisis de contratos", "actualizar los contratos que cambiaron", o "ver si hay contratos nuevos". Usa subagentes en paralelo (uno por proveedor) y consolida en un único archivo versionado. El atajo "/inicio"/"/init" vive en el skill `menu`, que muestra las 6 opciones y delega en Modo A de este skill.
+description: Lee contratos y adendas de proveedores (carpetas por categoría/proveedor: PDFs de contrato, adendas, órdenes de compra, formularios, dossiers) y produce un JSON consolidado por categoría (esquema v3, con trazabilidad fuente/confianza) más un Excel espejo y un resumen HTML (KPIs, vencimientos próximos, tabla filtrable, botón de descarga del Excel). Dos modos: "iniciar" (Modo A, desde cero) y "refrescar" (Modo B, incremental por mtime/tamaño). Paso inicial y repetible del Savings Engine — úsalo cuando pidan "clasificar contratos", "analizar los contratos", "extraer los contratos", "ingestar contratos nuevos", "leer la carpeta de contratos", "refrescar el análisis de contratos", "actualizar los contratos que cambiaron", o "ver si hay contratos nuevos". Usa subagentes en paralelo (uno por proveedor) y consolida en un único archivo versionado. El atajo "/inicio"/"/init" vive en el skill `menu`, que muestra las 6 opciones y delega en Modo A de este skill.
 ---
 
 # Contract Ingest
@@ -151,6 +151,17 @@ categoría**, nunca JSONs sueltos por proveedor:
    Esto pisa `<contracts_root>/.savings-engine/manifest.json` a propósito (es un snapshot vivo del
    estado de archivos, no un artefacto versionado — ver §6). Sin este paso, "refrescar análisis de
    contratos" no tiene línea de base contra la cual comparar.
+6. Generá el resumen HTML de la corrida (KPIs, vencimientos próximos, tabla filtrable) con botón de
+   descarga del Excel espejo del paso 3:
+   ```bash
+   python3 scripts/build_ingest_summary.py --json <ruta_al_json_v<N>> --excel <ruta_al_xlsx_v<N>>
+   ```
+   Esto genera `<categoria>_contratos_v<N>_resumen.html` junto al JSON y al Excel (mismo directorio
+   de salida — el botón de descarga del HTML linkea al `.xlsx` por nombre de archivo relativo, así
+   que los tres archivos tienen que quedar juntos). Igual que el Excel, este resumen se genera
+   siempre a partir del JSON ya validado — no agrega ni reinterpreta datos, solo los agrega/filtra
+   para lectura rápida. Compartí este HTML con el usuario como el resumen principal de la corrida
+   (el Excel queda como el detalle completo con trazabilidad fuente/confianza).
 
 ## 5. Verificación antes de entregar
 
@@ -161,8 +172,10 @@ categoría**, nunca JSONs sueltos por proveedor:
   falsos negativos).
 - Si existe `TRACKER.md` en `playbooks/`, actualizar la fila de la categoría (Extracción, versión,
   fecha, notas de hallazgos) al terminar — sin tocar las filas de otras categorías.
-- Contale al usuario, en un resumen corto (no en un archivo aparte): cuántos proveedores se
-  procesaron, qué versión quedó, y qué hallazgos/alertas quedaron en `notas` para revisar.
+- Entregale al usuario el HTML de resumen generado en el paso 6 (además de un mensaje corto en el
+  chat con lo mismo en texto plano: cuántos proveedores se procesaron, qué versión quedó, y qué
+  hallazgos/alertas quedaron en `notas` para revisar) — no hace falta que redacte un resumen aparte,
+  el HTML ya cubre esa necesidad con el detalle navegable y el link de descarga a Excel.
 
 Este paso (Modo A) es repetible: si el usuario vuelve a pedir "clasificá los contratos" / "iniciá
 desde cero" sobre una carpeta que ya tiene versiones previas, seguí siendo un reprocesamiento
@@ -224,6 +237,9 @@ Por cada categoría con proveedores afectados:
    registro nuevo en vez de "reemplazar" nada.
 4. Guardá como `_v<N+1>` (nunca pisa `_v<N>` — misma regla que Modo A), regenerá el Excel espejo
    (`build_excel_mirror.py`) y corré `validate_summary.py` sobre el archivo nuevo completo.
+5. Regenerá también el resumen HTML de esa categoría con `build_ingest_summary.py` (mismo comando
+   que el paso 6 de Modo A, apuntando al `_v<N+1>.json` y `.xlsx` nuevos) — el resumen tiene que
+   reflejar siempre la última versión, no la de antes del refresh.
 
 ### 6.5 Cerrar el ciclo
 
@@ -234,8 +250,10 @@ Por cada categoría con proveedores afectados:
    parcial, ya que el volumen de un refresh suele ser chico) — mismo criterio de "confianza baja"
    que en el paso 5 de Modo A.
 3. Si existe `TRACKER.md`, actualizá solo las filas de las categorías tocadas.
-4. Resumen corto al usuario: qué proveedores se reprocesaron y por qué (nuevo archivo / modificado),
-   qué versión quedó por categoría, y qué quedó para revisión manual (ej. archivos eliminados).
+4. Entregale al usuario el/los HTML de resumen regenerados en el paso 6.4.5 (uno por categoría
+   tocada), más un mensaje corto en el chat: qué proveedores se reprocesaron y por qué (nuevo
+   archivo / modificado), qué versión quedó por categoría, y qué quedó para revisión manual (ej.
+   archivos eliminados).
 
 ## Ver también
 
@@ -245,6 +263,11 @@ Por cada categoría con proveedores afectados:
 - `references/schema.json` — mismo esquema en formato JSON Schema (usado por `validate_summary.py`).
 - `scripts/validate_rut.py` — validador de dígito verificador chileno (módulo 11).
 - `scripts/build_excel_mirror.py` — genera el Excel espejo desde el JSON, resaltando `confianza: baja`.
+- `scripts/build_ingest_summary.py` — genera el resumen HTML (Modo A paso 6, Modo B paso 6.4.5) a
+  partir del JSON + el Excel ya generado, usando `assets/ingest_summary_template.html`.
+- `assets/ingest_summary_template.html` — template genérico del resumen HTML (no editar por
+  categoría — la data se inyecta vía `build_ingest_summary.py`, mismo patrón que
+  `../savings-report/assets/report_template.html`).
 - `scripts/parse_dossier_sr.py` — deriva los campos mecánicos de `dossier_savingsradar` desde el
   PPTX "Dossier SR" de cada proveedor.
 - `scripts/build_manifest.py` — snapshot de mtime+tamaño por archivo (Modo A, paso 5). Único archivo
