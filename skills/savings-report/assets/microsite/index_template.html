@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buscador de contratos — TAIL CUTTER</title>
+<style>
+  :root{
+    --green:#29BA74;
+    --green-dark:#1E8F58;
+    --dark:#1A1A1A;
+    --gray:#6B6B6B;
+    --light-gray:#F4F6F5;
+    --border:#E1E5E3;
+    --white:#FFFFFF;
+    color-scheme: light;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:"Segoe UI", Arial, Helvetica, sans-serif;
+    color:var(--dark); background:var(--white); font-size:14px;
+  }
+  header{
+    padding:22px 32px 14px 32px; border-bottom:2px solid var(--green);
+  }
+  header h1{
+    margin:0 0 4px 0; color:var(--green); font-size:22px; font-weight:700;
+  }
+  header .sub{ color:var(--gray); font-size:13px; }
+  nav{
+    display:flex; gap:4px; padding:0 32px; background:var(--light-gray);
+    border-bottom:1px solid var(--border);
+  }
+  nav button{
+    border:none; background:transparent; padding:12px 18px; font-size:13.5px;
+    font-weight:600; color:var(--gray); cursor:pointer; border-bottom:3px solid transparent;
+  }
+  nav button.active{ color:var(--green); border-bottom-color:var(--green); }
+  nav button:hover{ color:var(--green-dark); }
+  main{ padding:24px 32px 60px 32px; max-width:1400px; margin:0 auto; }
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  /* --- controls --- */
+  .controls{
+    display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end;
+    background:var(--light-gray); border:1px solid var(--border); border-radius:8px;
+    padding:16px; margin-bottom:18px;
+  }
+  .ctrl{ display:flex; flex-direction:column; gap:4px; }
+  .ctrl label{ font-size:11px; font-weight:700; color:var(--gray); text-transform:uppercase; letter-spacing:.03em; }
+  .ctrl input[type=text], .ctrl select{
+    border:1px solid var(--border); border-radius:5px; padding:7px 9px; font-size:13px; min-width:170px;
+    font-family:inherit;
+  }
+  .chips{ display:flex; flex-wrap:wrap; gap:6px; max-width:420px; }
+  .chip{
+    border:1px solid var(--border); border-radius:16px; padding:5px 11px; font-size:12px;
+    cursor:pointer; background:var(--white); user-select:none;
+  }
+  .chip.on{ background:var(--green); border-color:var(--green); color:var(--white); font-weight:600; }
+  .toggle{ display:flex; align-items:center; gap:6px; font-size:12.5px; cursor:pointer; }
+  .count{ font-size:12.5px; color:var(--gray); margin-bottom:10px; }
+  .reset-link{ font-size:12px; color:var(--green-dark); cursor:pointer; text-decoration:underline; align-self:center; }
+
+  /* --- contract cards --- */
+  .card{
+    border:1px solid var(--border); border-radius:8px; margin-bottom:12px; overflow:hidden;
+  }
+  .card-head{
+    display:flex; justify-content:space-between; align-items:center; gap:12px;
+    padding:12px 16px; cursor:pointer; background:var(--white);
+  }
+  .card-head:hover{ background:var(--light-gray); }
+  .card-head .prov{ font-weight:700; font-size:14.5px; }
+  .card-head .meta{ color:var(--gray); font-size:12.5px; }
+  .badge{
+    display:inline-block; font-size:11px; font-weight:700; border-radius:4px; padding:2px 7px; margin-left:6px;
+  }
+  .badge.alerta{ background:#FDE8E8; color:#B23B3B; }
+  .badge.mod{ background:#EAF6F0; color:var(--green-dark); }
+  .badge.nuevo{ background:#FFF4DE; color:#8A6100; }
+  .card-body{ display:none; padding:2px 16px 16px 16px; border-top:1px solid var(--border); background:var(--light-gray); }
+  .card-body.open{ display:block; }
+  .kv{ display:grid; grid-template-columns:180px 1fr; gap:6px 14px; margin:12px 0; font-size:13px; }
+  .kv .k{ font-weight:700; color:var(--gray); }
+  .kv .k.nuevo::after{ content:" (v3)"; font-weight:400; font-style:italic; font-size:11px; color:#8A6100; }
+  .prod-row{ background:var(--white); border:1px solid var(--border); border-radius:6px; padding:8px 10px; margin-bottom:6px; font-size:12.5px; }
+  .prod-row .tipo-tag{ color:var(--green-dark); font-weight:700; font-size:11px; text-transform:uppercase; }
+  .alerta-box{ background:#FDE8E8; border:1px solid #E9B4B4; color:#8A2626; border-radius:6px; padding:10px 12px; font-size:12.5px; margin:10px 0; }
+  .notas{ color:var(--gray); font-size:12px; margin-top:10px; }
+
+  /* --- product search --- */
+  .prod-result{
+    border:1px solid var(--border); border-radius:8px; padding:12px 16px; margin-bottom:10px;
+  }
+  .prod-result .desc{ font-size:13.5px; margin-bottom:6px; }
+  .prod-result .tags{ display:flex; gap:8px; flex-wrap:wrap; font-size:12px; color:var(--gray); }
+  .prod-result .tags b{ color:var(--dark); }
+  .jump-btn{
+    display:inline-block; margin-top:8px; font-size:12px; color:var(--white); background:var(--green);
+    border:none; border-radius:5px; padding:5px 10px; cursor:pointer;
+  }
+
+  /* --- one-pager --- */
+  .op-title{ color:var(--green); font-size:19px; font-weight:700; margin-bottom:18px; }
+  .op-grid{ display:grid; grid-template-columns:1fr 2.2fr; gap:0; }
+  .op-left{ padding-right:22px; border-right:1.5px solid var(--green); }
+  .op-right{ padding-left:22px; }
+  .op-h{ color:var(--green); font-weight:700; font-size:13px; margin-bottom:10px; }
+  .op-item{ display:flex; gap:10px; margin-bottom:14px; }
+  .op-dot{ width:22px; height:22px; min-width:22px; border-radius:50%; background:var(--green); margin-top:2px; }
+  .op-item .t{ font-weight:700; font-size:12.5px; }
+  .op-item .d{ font-size:11.5px; color:var(--gray); margin-top:2px; }
+  .bar-row{ display:grid; grid-template-columns:230px 1fr 90px; align-items:center; gap:8px; margin-bottom:7px; font-size:11.5px; }
+  .bar-label{ text-align:right; }
+  .bar-track{ background:var(--light-gray); border-radius:3px; height:16px; overflow:hidden; }
+  .bar-fill{ background:var(--green); height:100%; border-radius:3px; }
+  table.op-table{ width:100%; border-collapse:collapse; margin-top:16px; font-size:12px; }
+  table.op-table th{ background:var(--green); color:var(--white); text-align:left; padding:7px 10px; }
+  table.op-table td{ padding:7px 10px; border-bottom:1px solid var(--border); vertical-align:top; }
+  table.op-table tr:nth-child(even) td{ background:var(--light-gray); }
+  .callout{
+    border:1.5px solid var(--green); border-radius:14px; padding:12px 16px; margin-top:18px;
+    color:var(--green-dark); font-weight:700; font-size:13px;
+  }
+  .foot{ color:var(--gray); font-size:10.5px; margin-top:14px; line-height:1.5; }
+  .dias-restantes{ font-weight:700; }
+  .dias-restantes.soon{ color:#B23B3B; }
+
+  /* --- audit table --- */
+  .op-audit{ margin-top:34px; padding-top:26px; border-top:2px solid var(--border); }
+  .op-audit .op-title{ font-size:16px; margin-bottom:6px; }
+  .op-audit .nota-rol{ color:var(--gray); font-size:11.5px; margin-bottom:14px; }
+  .audit-scroll{ overflow-x:auto; }
+  table.audit-table{ width:100%; min-width:1050px; border-collapse:collapse; font-size:11.5px; }
+  table.audit-table th{ background:var(--green-dark); color:var(--white); text-align:left; padding:8px 10px; }
+  table.audit-table td{ padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; }
+  table.audit-table tr:nth-child(even) td{ background:var(--light-gray); }
+  table.audit-table td.contrato{ font-weight:700; white-space:nowrap; }
+  .pill{ display:inline-block; font-weight:700; font-size:11px; border-radius:10px; padding:2px 9px; }
+  .pill.si{ background:#EAF6F0; color:var(--green-dark); }
+  .pill.no{ background:#F1F1F1; color:var(--gray); }
+</style>
+</head>
+<body>
+<!--
+  Este archivo es GENÉRICO y no debería necesitar edición por categoría.
+  Todo el contenido específico de la categoría (contratos, auditoría, resumen one-pager) vive
+  en datos.js, que asigna a window.MICROSITE_DATA. Ver
+  ../../references/microsite_data_schema.md para el esquema completo de ese archivo.
+  Si este archivo necesita cambiar para una categoría puntual, es señal de que el esquema de
+  datos.js no le alcanza — evaluar si conviene ampliar el esquema en vez de bifurcar el HTML.
+-->
+<script src="datos.js"></script>
+
+<header>
+  <h1 id="pageTitle">Buscador de contratos</h1>
+  <div class="sub" id="pageSub"></div>
+</header>
+
+<nav>
+  <button class="tab active" data-view="onepager">Vista one-pager</button>
+  <button class="tab" data-view="catalogo">Catálogo de contratos</button>
+  <button class="tab" data-view="productos">Buscador de productos/servicios</button>
+</nav>
+
+<main>
+  <section id="view-onepager" class="view active"></section>
+  <section id="view-catalogo" class="view"></section>
+  <section id="view-productos" class="view"></section>
+</main>
+
+<script>
+const D = window.MICROSITE_DATA;
+const norm = s => (s||'').toString().normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+
+document.title = D.categoria + ' — Buscador de contratos';
+document.getElementById('pageTitle').textContent = D.categoria;
+document.getElementById('pageSub').textContent =
+  D.cliente + ' · ' + D.total_contratos + ' contratos · extracción ' + D.fecha_extraccion;
+
+// ---------- tabs ----------
+document.querySelectorAll('nav button.tab').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav button.tab').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('main .view').forEach(v=>v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+  });
+});
+function goToCatalogo(numeroContrato){
+  document.querySelectorAll('nav button.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('main .view').forEach(v=>v.classList.remove('active'));
+  document.querySelector('nav button[data-view=catalogo]').classList.add('active');
+  document.getElementById('view-catalogo').classList.add('active');
+  catState.search = numeroContrato;
+  document.getElementById('catSearch').value = numeroContrato;
+  renderCatalogo();
+  setTimeout(()=>{
+    const el = document.querySelector('[data-card="'+numeroContrato+'"]');
+    if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.querySelector('.card-body').classList.add('open'); }
+  }, 50);
+}
+
+// ---------- flatten productos/servicios ----------
+function flattenProductos(){
+  const out=[];
+  D.contratos.forEach(c=>{
+    (c.productos_servicios||[]).forEach(p=>{
+      out.push(Object.assign({}, p, {
+        proveedor:c.proveedor, numero_contrato:c.numero_contrato, alerta:c.alerta
+      }));
+    });
+  });
+  return out;
+}
+const PRODUCTOS = flattenProductos();
+const TIPOS = [...new Set(PRODUCTOS.map(p=>p.tipo).filter(Boolean))].sort();
+
+// ================= CATALOGO =================
+const catState = { search:'', proveedor:'', tipos:new Set(), soloAlerta:false, soloMod:false, moneda:new Set() };
+const MONEDAS = ['UF','CLP','USD'];
+const PROVEEDORES = [...new Set(D.contratos.map(c=>c.proveedor))];
+
+function contratoMatches(c){
+  const s = norm(catState.search);
+  if(s){
+    const hay = norm(c.proveedor+' '+c.numero_contrato+' '+(c.productos_servicios||[]).map(p=>p.descripcion).join(' '));
+    if(!hay.includes(s)) return false;
+  }
+  if(catState.proveedor && c.proveedor!==catState.proveedor) return false;
+  if(catState.soloAlerta && !c.alerta) return false;
+  if(catState.soloMod && !c.tiene_modificacion) return false;
+  if(catState.tipos.size){
+    const tiposContrato = new Set((c.productos_servicios||[]).map(p=>p.tipo));
+    let any=false; catState.tipos.forEach(t=>{ if(tiposContrato.has(t)) any=true; });
+    if(!any) return false;
+  }
+  if(catState.moneda.size){
+    let any=false; catState.moneda.forEach(m=>{ if(norm(c.monto_total.moneda).includes(norm(m))) any=true; });
+    if(!any) return false;
+  }
+  return true;
+}
+
+function renderCatalogo(){
+  const root = document.getElementById('view-catalogo');
+  const list = D.contratos.filter(contratoMatches).sort((a,b)=> a.vigencia.fecha_fin.localeCompare(b.vigencia.fecha_fin));
+
+  root.innerHTML = `
+    <div class="controls">
+      <div class="ctrl">
+        <label>Buscar (proveedor, N° contrato, producto)</label>
+        <input type="text" id="catSearch" placeholder="ej. proveedor, N° de contrato, producto..." value="${catState.search.replace(/"/g,'')}">
+      </div>
+      <div class="ctrl">
+        <label>Proveedor</label>
+        <select id="catProveedor">
+          <option value="">Todos</option>
+          ${PROVEEDORES.map(p=>`<option value="${p.replace(/"/g,'&quot;')}" ${catState.proveedor===p?'selected':''}>${p}</option>`).join('')}
+        </select>
+      </div>
+      <div class="ctrl">
+        <label>Moneda</label>
+        <div class="chips" id="catMoneda">
+          ${MONEDAS.map(m=>`<span class="chip ${catState.moneda.has(m)?'on':''}" data-m="${m}">${m}</span>`).join('')}
+        </div>
+      </div>
+      <div class="ctrl">
+        <label>Tipo de servicio</label>
+        <div class="chips" id="catTipos">
+          ${TIPOS.map(t=>`<span class="chip ${catState.tipos.has(t)?'on':''}" data-t="${t.replace(/"/g,'&quot;')}">${t}</span>`).join('')}
+        </div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="catAlerta" ${catState.soloAlerta?'checked':''}> Solo con alerta</label>
+      <label class="toggle"><input type="checkbox" id="catMod" ${catState.soloMod?'checked':''}> Solo con modificación</label>
+      <span class="reset-link" id="catReset">Limpiar filtros</span>
+    </div>
+    <div class="count">${list.length} de ${D.contratos.length} contratos (orden: vencimiento más próximo primero)</div>
+    <div id="catList"></div>
+  `;
+
+  document.getElementById('catSearch').addEventListener('input', e=>{ catState.search=e.target.value; renderCatalogo(); document.getElementById('catSearch').focus(); document.getElementById('catSearch').setSelectionRange(9999,9999); });
+  document.getElementById('catProveedor').addEventListener('change', e=>{ catState.proveedor=e.target.value; renderCatalogo(); });
+  document.getElementById('catAlerta').addEventListener('change', e=>{ catState.soloAlerta=e.target.checked; renderCatalogo(); });
+  document.getElementById('catMod').addEventListener('change', e=>{ catState.soloMod=e.target.checked; renderCatalogo(); });
+  document.getElementById('catReset').addEventListener('click', ()=>{
+    catState.search=''; catState.proveedor=''; catState.tipos.clear(); catState.moneda.clear();
+    catState.soloAlerta=false; catState.soloMod=false; renderCatalogo();
+  });
+  document.querySelectorAll('#catMoneda .chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const m=chip.dataset.m;
+      catState.moneda.has(m)?catState.moneda.delete(m):catState.moneda.add(m);
+      renderCatalogo();
+    });
+  });
+  document.querySelectorAll('#catTipos .chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const t=chip.dataset.t;
+      catState.tipos.has(t)?catState.tipos.delete(t):catState.tipos.add(t);
+      renderCatalogo();
+    });
+  });
+
+  const catList = document.getElementById('catList');
+  catList.innerHTML = list.map(c=>{
+    const alertaBadge = c.alerta ? `<span class="badge alerta">⚠ Alerta</span>` : '';
+    const modBadge = c.tiene_modificacion ? `<span class="badge mod">Con modificación</span>` : '';
+    const prodRows = (c.productos_servicios||[]).map(p=>`
+      <div class="prod-row">
+        <div class="tipo-tag">${p.tipo||'Sin categorizar'}</div>
+        <div>${p.descripcion}</div>
+        <div><b>Cantidad:</b> ${p.cantidad||'-'} &nbsp; <b>Costo unitario:</b> ${p.costo_unitario||'-'} ${p.moneda?('('+p.moneda+')'):''}</div>
+      </div>`).join('');
+    return `
+    <div class="card" data-card="${c.numero_contrato}">
+      <div class="card-head" onclick="this.parentElement.querySelector('.card-body').classList.toggle('open')">
+        <div>
+          <div class="prov">${c.proveedor} ${alertaBadge}${modBadge}</div>
+          <div class="meta">N° ${c.numero_contrato} · Vigencia ${c.vigencia.fecha_inicio} a ${c.vigencia.fecha_fin} · ${c.monto_total.moneda||'-'}</div>
+        </div>
+        <div class="meta">▾ ver detalle</div>
+      </div>
+      <div class="card-body">
+        ${c.alerta ? `<div class="alerta-box">⚠ ${c.alerta}</div>` : ''}
+        <div class="kv">
+          <div class="k">RUT/RUN proveedor</div><div>${c.rut_run_proveedor||'-'}</div>
+          <div class="k nuevo">Validación RUT</div><div>${c.rut_validacion||'-'}</div>
+          <div class="k">Vigencia</div><div>${c.vigencia.fecha_inicio} a ${c.vigencia.fecha_fin}${c.vigencia_nota?(' — '+c.vigencia_nota):''}</div>
+          <div class="k nuevo">Renovación automática/tácita</div><div>${c.renovacion_automatica||'-'}</div>
+          <div class="k nuevo">Término anticipado</div><div>${c.termino_anticipado||'-'}</div>
+          <div class="k">Monto total</div><div>${c.monto_total.valor} <b>(${c.monto_total.moneda||'-'})</b></div>
+          <div class="k">Tipo de cambio</div><div>${c.tipo_cambio||'No especificado'}</div>
+          <div class="k">Método de pago</div><div>${c.metodo_pago||'-'}</div>
+          <div class="k">Niveles de servicio / KPI</div><div>${c.niveles_servicio||'-'}</div>
+          <div class="k">Incentivo de desempeño</div><div>${c.clausula_incentivo_desempeno||'-'}</div>
+          <div class="k nuevo">Multa / penalización</div><div>${c.clausula_multa_penalizacion||'-'}</div>
+          <div class="k nuevo">Reajuste / indexación</div><div>${c.mecanismo_reajuste_indexacion||'-'}</div>
+          <div class="k">Documentos fuente</div><div>${(c.documentos_fuente||[]).join('<br>')}</div>
+        </div>
+        <div class="op-h" style="margin-top:6px;">Productos y servicios de este contrato</div>
+        ${prodRows}
+        <div class="notas"><b>Notas de extracción:</b> ${c.notas||'-'}</div>
+      </div>
+    </div>`;
+  }).join('') || '<div class="count">Sin contratos que coincidan con los filtros.</div>';
+}
+
+// ================= BUSCADOR DE PRODUCTOS/SERVICIOS =================
+let prodSearchTerm = '';
+function renderProductos(){
+  const root = document.getElementById('view-productos');
+  root.innerHTML = `
+    <div class="controls">
+      <div class="ctrl" style="flex:1;">
+        <label>Buscar producto o servicio</label>
+        <input type="text" id="prodSearch" placeholder="Escribí un producto o servicio..." value="${prodSearchTerm.replace(/"/g,'')}" style="min-width:340px;">
+      </div>
+      <div class="ctrl">
+        <label>Filtrar por tipo</label>
+        <div class="chips" id="prodTipos">
+          ${TIPOS.map(t=>`<span class="chip" data-t="${t.replace(/"/g,'&quot;')}">${t}</span>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="count" id="prodCount"></div>
+    <div id="prodResults"></div>
+  `;
+  let activeTipo = null;
+  function apply(){
+    const s = norm(prodSearchTerm);
+    const results = PRODUCTOS.filter(p=>{
+      if(activeTipo && p.tipo!==activeTipo) return false;
+      if(!s) return true;
+      return norm(p.descripcion+' '+p.tipo+' '+p.proveedor).includes(s);
+    });
+    document.getElementById('prodCount').textContent = results.length + ' resultado(s) en ' + new Set(results.map(r=>r.numero_contrato)).size + ' contrato(s)';
+    document.getElementById('prodResults').innerHTML = results.map(p=>`
+      <div class="prod-result">
+        <div class="tags"><span class="tipo-tag" style="color:#1E8F58;font-weight:700;font-size:11px;text-transform:uppercase;">${p.tipo||'Sin categorizar'}</span></div>
+        <div class="desc">${p.descripcion}</div>
+        <div class="tags">
+          <span><b>Proveedor:</b> ${p.proveedor}</span>
+          <span><b>N° contrato:</b> ${p.numero_contrato}</span>
+          <span><b>Cantidad:</b> ${p.cantidad||'-'}</span>
+          <span><b>Costo unitario:</b> ${p.costo_unitario||'-'} ${p.moneda?('('+p.moneda+')'):''}</span>
+        </div>
+        <button class="jump-btn" onclick="goToCatalogo('${p.numero_contrato}')">Ver contrato completo →</button>
+      </div>
+    `).join('') || '<div class="count">Sin resultados. Probá con otro término.</div>';
+  }
+  document.getElementById('prodSearch').addEventListener('input', e=>{ prodSearchTerm=e.target.value; apply(); });
+  document.querySelectorAll('#prodTipos .chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      document.querySelectorAll('#prodTipos .chip').forEach(c=>c.classList.remove('on'));
+      if(activeTipo===chip.dataset.t){ activeTipo=null; } else { activeTipo=chip.dataset.t; chip.classList.add('on'); }
+      apply();
+    });
+  });
+  apply();
+}
+
+// ================= ONE-PAGER =================
+function diasRestantes(fechaFinStr){
+  const m = fechaFinStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if(!m) return null;
+  const fin = new Date(+m[1], +m[2]-1, +m[3]);
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  return Math.round((fin-hoy)/86400000);
+}
+function pill(valor){
+  const v = (valor||'').toString().trim().toLowerCase();
+  if(v.startsWith('sí') || v.startsWith('si')) return `<span class="pill si">${valor}</span>`;
+  return `<span class="pill no">${valor}</span>`;
+}
+function renderOnepager(){
+  const root = document.getElementById('view-onepager');
+  const R = D.onepager_resumen;
+  const A = D.auditoria_contratos;
+  const maxVal = Math.max(...R.monto_por_proveedor_clp_mm.map(x=>x.valor));
+  root.innerHTML = `
+    <div class="op-title">${R.titulo}</div>
+    <div class="op-grid">
+      <div class="op-left">
+        <div class="op-h">${R.left_heading || 'Productos y servicios de la categoría'}</div>
+        <div id="opLeftItems"></div>
+      </div>
+      <div class="op-right">
+        <div class="op-h">${R.chart_heading || 'Monto total y % de participación por proveedor (CLP MM)'}</div>
+        <div id="opChart"></div>
+        <table class="op-table">
+          <thead><tr><th>Vencimiento</th><th>Proveedor(es)</th><th>N° Contrato(s)</th><th>Alerta</th><th>Días restantes (hoy)</th></tr></thead>
+          <tbody id="opTableBody"></tbody>
+        </table>
+        <div class="callout">${R.callout}</div>
+        <div class="foot">${R.fuente_texto}<br>${R.nota_metodologica}</div>
+      </div>
+    </div>
+
+    <div class="op-audit">
+      <div class="op-title">${A.titulo}</div>
+      <div class="nota-rol">${A.nota_rol}</div>
+      <div class="callout">${A.hallazgo_principal}</div>
+      <div class="audit-scroll">
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th>N° Contrato / Proveedor</th>
+              <th>Duración</th>
+              <th>Modalidad de pago</th>
+              <th>Compromiso de volumen / SLA</th>
+              <th>Incentivos</th>
+              <th>Penalidades</th>
+              <th>Reajuste / indexación</th>
+            </tr>
+          </thead>
+          <tbody id="auditTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  document.getElementById('opLeftItems').innerHTML = (R.left_items||[]).map(item=>`
+    <div class="op-item"><div class="op-dot"></div><div><div class="t">${item.title}</div><div class="d">${item.desc}</div></div></div>
+  `).join('');
+  document.getElementById('opChart').innerHTML = R.monto_por_proveedor_clp_mm.map(row=>`
+    <div class="bar-row">
+      <div class="bar-label">${row.proveedor} (${row.pct}%)</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(row.valor/maxVal*100).toFixed(1)}%"></div></div>
+      <div>${row.valor.toLocaleString('es-CL')}</div>
+    </div>
+  `).join('');
+  document.getElementById('opTableBody').innerHTML = R.vencimientos.map(v=>{
+    // busca la fecha_fin real de un contrato que coincida para el conteo de días en vivo
+    // (primer número de contrato en la lista)
+    const firstNum = v.contratos.split('/')[0].trim();
+    const c = D.contratos.find(x=>x.numero_contrato===firstNum);
+    const dias = c ? diasRestantes(c.vigencia.fecha_fin) : null;
+    const diasHtml = dias===null ? '-' : `<span class="dias-restantes ${dias<=180?'soon':''}">${dias} días</span>`;
+    return `<tr><td>${v.vencimiento}</td><td>${v.proveedores}</td><td>${v.contratos}</td><td>${v.alerta}</td><td>${diasHtml}</td></tr>`;
+  }).join('');
+  document.getElementById('auditTableBody').innerHTML = A.filas.map(f=>`
+    <tr>
+      <td class="contrato">${f.numero_contrato}<br><span style="font-weight:400;color:var(--gray);">${f.proveedor}</span></td>
+      <td>${f.duracion}</td>
+      <td>${f.modalidad_pago}</td>
+      <td>${f.compromiso_volumen_sla}</td>
+      <td>${pill(f.incentivos)}</td>
+      <td>${pill(f.penalidades)}</td>
+      <td>${pill(f.reajuste_indexacion)}</td>
+    </tr>
+  `).join('');
+}
+
+renderCatalogo();
+renderProductos();
+renderOnepager();
+</script>
+</body>
+</html>

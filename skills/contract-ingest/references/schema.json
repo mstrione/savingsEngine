@@ -1,90 +1,144 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ContractSummary",
-  "description": "Esquema v0 (draft) para el resumen JSON de un proveedor/contrato. Ver schema.md para la descripción completa de cada campo.",
+  "title": "CategoryContractExtraction",
+  "description": "Esquema v3 para el JSON consolidado de una categoría (metadata + arreglo de contratos). Ver schema.md para la descripción completa de cada campo. Mirror del formato usado por INPUT/playbooks/01_extraccion_contratos.md v3.",
   "type": "object",
-  "required": [
-    "schema_version",
-    "provider_id",
-    "provider_name",
-    "category",
-    "documents",
-    "summary",
-    "source_folder",
-    "processed_at"
-  ],
+  "required": ["metadata", "contratos"],
   "properties": {
-    "schema_version": { "type": "string" },
-    "provider_id": { "type": "string" },
-    "provider_name": { "type": "string" },
-    "category": { "type": "string" },
-    "contract_number": { "type": ["string", "null"] },
-    "effective_date": { "type": ["string", "null"], "format": "date" },
-    "expiration_date": { "type": ["string", "null"], "format": "date" },
-    "term_months": { "type": ["number", "null"] },
-    "renewal_type": { "enum": ["automatica", "manual", "desconocida"] },
-    "notice_period_days": { "type": ["number", "null"] },
-    "currency": { "type": ["string", "null"] },
-    "pricing_model": { "enum": ["fijo", "variable", "por_consumo", "mixto", "desconocido"] },
-    "total_value_estimate": { "type": ["number", "null"] },
-    "payment_terms_days": { "type": ["number", "null"] },
-    "volume_commitment": { "type": ["string", "null"] },
-    "key_clauses": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["clause_type", "description", "source_document"],
-        "properties": {
-          "clause_type": { "type": "string" },
-          "description": { "type": "string" },
-          "source_document": { "type": "string" }
-        }
+    "metadata": {
+      "type": "object",
+      "required": ["categoria", "fecha_extraccion", "version", "total_contratos"],
+      "properties": {
+        "categoria": { "type": "string" },
+        "fecha_extraccion": { "type": "string", "format": "date" },
+        "cliente": { "type": ["string", "null"] },
+        "metodologia": { "type": ["string", "null"] },
+        "version": { "type": "string" },
+        "version_anterior": { "type": ["string", "null"] },
+        "total_contratos": { "type": "integer" },
+        "nota_normalizacion": { "type": ["string", "null"] }
       }
     },
-    "modifications": {
+    "contratos": {
       "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["mod_number", "date", "document_file", "summary"],
-        "properties": {
-          "mod_number": { "type": "string" },
-          "date": { "type": ["string", "null"] },
-          "document_file": { "type": "string" },
-          "summary": { "type": "string" }
-        }
+      "items": { "$ref": "#/definitions/contrato" }
+    }
+  },
+  "definitions": {
+    "campo_con_trazabilidad": {
+      "type": "object",
+      "description": "Envoltorio mínimo de trazabilidad. Implementaciones reales pueden anidar más sub-campos (detalle, existe, validacion_digito_verificador, etc.) — este objeto solo exige el mínimo.",
+      "properties": {
+        "valor": {},
+        "fuente": { "type": ["string", "null"] },
+        "confianza": { "enum": ["alta", "media", "baja", null] }
       }
     },
-    "documents": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["file_name", "doc_type"],
-        "properties": {
-          "file_name": { "type": "string" },
-          "doc_type": {
-            "enum": ["contrato", "modificacion", "odc", "formulario_admin", "dossier_negociacion", "otro"]
-          },
-          "date": { "type": ["string", "null"] }
-        }
+    "monto": {
+      "type": "object",
+      "required": ["moneda", "valor", "periodo"],
+      "properties": {
+        "moneda": { "type": "string" },
+        "valor": { "type": "number" },
+        "periodo": { "type": "string" }
       }
     },
-    "contacts": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["name", "role"],
-        "properties": {
-          "name": { "type": "string" },
-          "role": { "type": ["string", "null"] }
-        }
+    "contrato": {
+      "type": "object",
+      "required": [
+        "numero_contrato",
+        "proveedor",
+        "rut_run_proveedor",
+        "vigencia",
+        "monto_total",
+        "documentos_fuente"
+      ],
+      "properties": {
+        "numero_contrato": { "type": "string" },
+        "proveedor": { "type": "string" },
+        "rut_run_proveedor": {
+          "type": "object",
+          "required": ["valor"],
+          "properties": {
+            "valor": { "type": "string" },
+            "validacion_digito_verificador": { "type": "object" },
+            "fuente": { "type": ["string", "null"] },
+            "confianza": { "enum": ["alta", "media", "baja", null] }
+          }
+        },
+        "vigencia": {
+          "type": "object",
+          "properties": {
+            "fecha_inicio": { "$ref": "#/definitions/campo_con_trazabilidad" },
+            "fecha_fin": { "$ref": "#/definitions/campo_con_trazabilidad" },
+            "renovacion_automatica_tacita": { "type": "object" },
+            "renovacion_automatica": { "type": "object" },
+            "termino_anticipado": { "type": "object" }
+          }
+        },
+        "monto_total": {
+          "description": "Puede venir como objeto {valor:[...],nota,fuente,confianza} o directamente como lista [{moneda,valor,periodo}] — tolerar ambas formas (ver nota de variabilidad entre sub-agentes en schema.md) pero normalizar a la forma objeto al consolidar.",
+          "anyOf": [
+            {
+              "type": "object",
+              "required": ["valor"],
+              "properties": {
+                "valor": { "type": "array", "items": { "$ref": "#/definitions/monto" } },
+                "nota": { "type": ["string", "null"] },
+                "fuente": { "type": ["string", "null"] },
+                "confianza": { "enum": ["alta", "media", "baja", null] }
+              }
+            },
+            {
+              "type": "array",
+              "items": { "$ref": "#/definitions/monto" }
+            }
+          ]
+        },
+        "tipo_cambio": { "type": ["object", "null"] },
+        "productos_servicios_costo_unitario": {
+          "type": "object",
+          "properties": {
+            "descripcion_cantidad": { "type": "array" },
+            "costo_unitario": { "type": "array" }
+          }
+        },
+        "metodo_pago": { "$ref": "#/definitions/campo_con_trazabilidad" },
+        "niveles_servicio": { "$ref": "#/definitions/campo_con_trazabilidad" },
+        "clausula_incentivo_desempeno": {
+          "type": "object",
+          "properties": {
+            "valor": { "type": ["string", "boolean", "null"] },
+            "detalle": {},
+            "fuente": { "type": ["string", "null"] },
+            "confianza": { "enum": ["alta", "media", "baja", null] }
+          }
+        },
+        "clausula_multa_penalizacion": {
+          "type": "object",
+          "properties": {
+            "valor": { "type": ["string", "boolean", "null"] },
+            "detalle": {},
+            "fuente": { "type": ["string", "null"] },
+            "confianza": { "enum": ["alta", "media", "baja", null] }
+          }
+        },
+        "mecanismo_reajuste_indexacion": {
+          "type": "object",
+          "properties": {
+            "valor": { "type": ["string", "boolean", "null"] },
+            "detalle": {},
+            "fuente": { "type": ["string", "null"] },
+            "confianza": { "enum": ["alta", "media", "baja", null] }
+          }
+        },
+        "documentos_fuente": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "notas": { "type": ["string", "null"] },
+        "metadata_extraccion": { "type": ["object", "null"] }
       }
-    },
-    "flags": {
-      "type": "array",
-      "items": { "type": "string" }
-    },
-    "summary": { "type": "string" },
-    "source_folder": { "type": "string" },
-    "processed_at": { "type": "string", "format": "date-time" }
+    }
   }
 }

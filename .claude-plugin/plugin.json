@@ -1,0 +1,5 @@
+{
+  "name": "savings-engine",
+  "version": "1.0.0",
+  "description": "Pipeline de analisis de contratos de proveedores para detectar oportunidades de descuento y renegociacion: ingesta de contratos, deteccion de palancas, one-pagers, reportes/microsite y borradores de correo, con validacion humana antes de cualquier envio."
+}

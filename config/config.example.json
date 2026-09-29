@@ -1,7 +1,7 @@
 {
-  "_comment": "Copiá este archivo a config/config.json y completá los valores. config.json está en .gitignore — nunca se sube al repo.",
+  "_comment": "Este es solo un template de referencia. El archivo real vive DENTRO de tu carpeta de contratos, en <tu carpeta de contratos>/.savings-engine/config.json — no en este repo/plugin, que queda montado en modo solo lectura una vez instalado. Normalmente no hace falta copiarlo a mano: el plugin lo crea solo en la primera corrida (/inicio).",
   "contracts_root": "/ruta/absoluta/a/tu/carpeta/de/Contratos",
-  "output_root": "output",
+  "output_root": "/ruta/absoluta/a/tu/carpeta/de/Contratos/output",
   "company_context": {
     "name": "",
     "notes": "Contexto opcional que ayuda a los skills a redactar mejor (ej. nombre de la empresa que negocia, industria, moneda por defecto)."

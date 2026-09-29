@@ -11,12 +11,21 @@ de correo, con validación humana obligatoria antes de cualquier envío.
 ## 1. Reunir el contexto
 
 - Identificá al proveedor y las oportunidades relevantes en
-  `output/discount-opportunities/<fecha>.json` (filtrando por `provider_id`/`provider_name`).
+  `<contracts_root>/output/discount-opportunities/<fecha>.json` (filtrando por
+  `proveedor`/`numero_contrato` — ver el formato de salida real en `../discount-finder/SKILL.md`).
 - Si el usuario no especificó qué oportunidad usar y hay varias para ese proveedor, preguntale
   cuáles incluir en el correo (no asumas "todas" por defecto si hay oportunidades de baja
   confianza).
-- Recuperá del JSON de `contract-ingest` el contacto/nombre de la contraparte si está disponible
-  (`contacts`), y el número de contrato (`contract_number`) para referenciarlo con precisión.
+- El esquema v3 de `contract-ingest` (`../contract-ingest/references/schema.md`) **no captura un
+  contacto/contraparte explícito** — no asumas que existe un campo `contacts` en el JSON. Usá
+  `numero_contrato` del registro para referenciar el contrato con precisión, y si el correo
+  necesita un nombre de contraparte, dejá un placeholder (ej. `[Nombre contraparte]`) y pedile al
+  usuario que lo complete, en vez de inventar uno o asumir que está en el JSON.
+- Si la oportunidad tiene `estimated_savings_source: "dossier_savingsradar"`, podés citar el
+  porcentaje/monto igual que si viniera del contrato — es una cifra ya cuantificada por la
+  herramienta SavingsRadar de BCG, no una estimación tuya (ver
+  `../discount-finder/references/palancas.md`, palanca 11) — pero mantené el tono del correo
+  como apertura de conversación, no como ultimátum con la cifra exacta del LAA.
 
 ## 2. Redactar el borrador
 

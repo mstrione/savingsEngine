@@ -26,3 +26,9 @@ node_modules/
 
 # Evals / workspaces de skill-creator si se usan localmente
 *-workspace/
+
+# QA temporal de scripts (datos sintéticos, nunca material del plugin)
+/_tmp_qa/
+
+# Build artifact del plugin (se genera con `zip` para subir a Cowork/Customize, no es fuente)
+/savings-engine-plugin.zip

@@ -5,7 +5,7 @@
 
 ## Estructura sugerida
 
-1. **Asunto**: `Revisión de condiciones — Contrato <contract_number> / <provider_name>`
+1. **Asunto**: `Revisión de condiciones — Contrato <numero_contrato> / <proveedor>`
 2. **Apertura**: referencia concreta al contrato y a la relación comercial vigente, sin rodeos.
 3. **Cuerpo**: 1-2 párrafos que expliquen, en términos de negocio, la razón de la revisión
    (ej. proximidad de renovación, benchmark de mercado, volumen consolidado), citando el
