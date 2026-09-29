@@ -34,6 +34,16 @@ quiere antes de arrancar — no son intercambiables ni comparten output.
 Convierte `<contracts_root>/output/discount-opportunities/<fecha>.json` en un reporte HTML legible
 para compartir internamente.
 
+### A.0 Prerrequisito (obligatorio, en cadena)
+
+Este JSON lo genera `discount-finder`, que a su vez necesita el JSON consolidado de
+`contract-ingest`. **Si no existe `<contracts_root>/output/discount-opportunities/<fecha>.json`,
+no armes el reporte igual** — fijate cuál de los dos pasos previos falta:
+- Si no existe ningún `_contratos_v<N>.json` para la categoría, falta el paso 1 ("Iniciar análisis
+  de contratos") — recomendáselo al usuario como primer paso, no se puede saltar.
+- Si el JSON de contratos sí existe pero no hay `discount-opportunities/<fecha>.json`, falta correr
+  `discount-finder` — recomendáselo antes de generar el reporte.
+
 ### A.1 Elegí el formato de salida
 
 - **Si el usuario ya compartió un ejemplo de reporte** (mencionó que lo iba a pasar): seguí ese
@@ -88,10 +98,13 @@ en `datos.js`, que asigna `window.MICROSITE_DATA`. Si en algún momento parece n
 HTML para una categoría puntual, es señal de que falta un campo en el esquema — ver
 `references/microsite_data_schema.md` — no de que haya que bifurcar el template.
 
-### B.1 Prerrequisito
+### B.1 Prerrequisito (obligatorio)
 
-Confirmá que existe el JSON consolidado de `contract-ingest` para esa categoría
-(`<categoria>_contratos_v<N>.json`). Si no existe, avisale al usuario que hay que correrlo primero.
+**Paso 1 ("Iniciar análisis de contratos" / `contract-ingest` Modo A) tiene que haber corrido sí o
+sí para esa categoría antes de armar el microsite.** Confirmá que existe el JSON consolidado de
+`contract-ingest` para esa categoría (`<categoria>_contratos_v<N>.json`). Si no existe, no sigas
+de largo: decile al usuario explícitamente que hace falta correr "Iniciar análisis de contratos"
+(paso 1) primero, recomendáselo, y esperá su confirmación antes de avanzar.
 
 Si ya existe un `onepager_spec.json` de `category-onepager` para la misma categoría (Etapa 2 del
 pipeline), **leelo y reusá literalmente** `left_items`, el headline/`callout`, y el

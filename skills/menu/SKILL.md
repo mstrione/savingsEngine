@@ -43,8 +43,14 @@ después de la opción 3 si el usuario tiene esa slide ya generada aparte).
 
 - Listalas numeradas en el chat, con una línea de qué hace cada una — no repitas el detalle interno
   de cada skill acá, ese detalle vive en el SKILL.md de destino.
-- Si no existe `.savings-engine/manifest.json` en la carpeta de contratos conectada, marcá la opción
-  2 como "(necesita haber corrido la opción 1 primero)" en vez de ocultarla.
+- **El paso 1 (opción 1) es un prerrequisito obligatorio para las opciones 2 a 6** — ninguna de esas
+  cinco puede hacer nada real sin que exista primero el JSON consolidado de `contract-ingest` para
+  la categoría en cuestión (opción 2 además necesita puntualmente `manifest.json`, ver
+  `../contract-ingest/SKILL.md` §6.0). Si no existe `.savings-engine/manifest.json` ni ningún
+  `<categoria>_contratos_v<N>.json` en la carpeta de contratos conectada, marcá **las opciones 2 a
+  6** como "(necesita haber corrido la opción 1 primero)" en vez de ocultarlas, y si el usuario elige
+  una de ellas igual, recomendale explícitamente correr la opción 1 antes — no la dejes elegir una
+  opción imposible sin avisarle.
 - Esperá a que el usuario elija (por número o por nombre) antes de hacer cualquier otra cosa — este
   skill no ejecuta nada por sí mismo.
 

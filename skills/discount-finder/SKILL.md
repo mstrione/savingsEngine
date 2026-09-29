@@ -8,14 +8,19 @@ description: Analiza el/los JSON consolidados de contract-ingest (uno por catego
 Segundo paso del pipeline: convierte los JSON de `contract-ingest` en una lista de oportunidades
 de descuento concretas, trazables y sin cifras inventadas.
 
-## Prerrequisito
+## Prerrequisito (obligatorio, no negociable)
 
 El output real de `contract-ingest` es **un JSON consolidado por categoría**
 (`<categoria>_contratos_v<N>.json`, típicamente en una carpeta `Extracciones/` dentro de la
 categoría — ver `../contract-ingest/SKILL.md` paso 4.2) — no un índice global ni un JSON por
-proveedor. Si para la categoría en alcance no existe ningún `_contratos_v<N>.json`, avisale al
-usuario que primero hay que correr `contract-ingest` (o corré ese paso vos mismo si el usuario ya
-te dio la carpeta de contratos y solo faltó ese paso).
+proveedor. **Paso 1 ("Iniciar análisis de contratos" / `contract-ingest` Modo A) tiene que haber
+corrido sí o sí para la categoría en alcance antes de poder hacer cualquier otra cosa acá.**
+
+Si para la categoría en alcance no existe ningún `_contratos_v<N>.json`, no sigas de largo ni lo
+corras vos mismo en silencio: **decile al usuario explícitamente que hace falta correr primero
+"Iniciar análisis de contratos" (paso 1) sobre esa categoría**, y recomendáselo como el siguiente
+paso — esperá su confirmación antes de lanzar `contract-ingest`, igual que con cualquier otra
+corrida nueva del pipeline (ver la regla de activación de ese skill).
 
 ## 1. Alcance de la corrida
 

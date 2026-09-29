@@ -21,11 +21,14 @@ el usuario lo pide explícitamente**. Si solo pregunta algo sobre un one-pager y
 proveedor tiene más participación?"), respondé mirando el PPTX/JSON existentes — no dispares una
 regeneración.
 
-## 1. Prerrequisito y detección de playbook propio
+## 1. Prerrequisito (obligatorio) y detección de playbook propio
 
-- Confirmá que existe el JSON de `contract-ingest` para esa categoría
-  (`<categoria>_contratos_v<N>.json`). Si no existe, avisale al usuario que hay que correr
-  `contract-ingest` primero.
+- **Paso 1 ("Iniciar análisis de contratos" / `contract-ingest` Modo A) tiene que haber corrido sí
+  o sí para esa categoría antes de armar el one-pager** — confirmá que existe el JSON de
+  `contract-ingest` para esa categoría (`<categoria>_contratos_v<N>.json`). Si no existe, no
+  intentes avanzar igual: decile al usuario explícitamente que primero hay que correr "Iniciar
+  análisis de contratos" (paso 1) sobre esa categoría, recomendáselo, y esperá su confirmación —
+  no hay one-pager posible sin ese JSON.
 - Si `contracts_root` tiene un `playbooks/02_onepager_categoria.md` real (mismo patrón que
   `contract-ingest` paso 1), es la fuente de verdad — leelo completo y priorizalo sobre las reglas
   resumidas en este SKILL.md. Revisá también `playbooks/TRACKER.md` para saber si esta categoría ya
