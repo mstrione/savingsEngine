@@ -117,11 +117,13 @@ la entrega final; el script imprime un conteo de cuántas filas quedan pendiente
 ### B.3 Redactar `microsite_data.json`
 
 Con el esquema completo de `references/microsite_data_schema.md`, armá el JSON de especificación:
-`categoria`, `contratos[]`, `productos_servicios[]` (acordate que el campo `tipo` de cada producto
-**no es derivable mecánicamente** — proponé la taxonomía de tipos en el chat si es la primera vez
-que se procesa esta categoría), `auditoria_contratos` (usando el resultado del paso B.2, con los
-`TODO` ya completados), y `onepager_resumen` (reusando contenido de `category-onepager` si
-corresponde, per B.1).
+`categoria`, `cliente`, `total_contratos`, `fecha_extraccion` (las 4 claves del header — si falta
+alguna, el header muestra literalmente "undefined", no hay fallback en el template), `contratos[]`
+(cada contrato con su `productos_servicios[]` **anidado**, no como lista aparte — el campo `tipo`
+de cada producto **no es derivable mecánicamente**, proponé la taxonomía en el chat si es la
+primera vez que se procesa esta categoría), `auditoria_contratos` (usando el resultado del paso
+B.2, con los `TODO` ya completados), y `onepager_resumen` (reusando contenido de
+`category-onepager` si corresponde, per B.1).
 
 Guardá este JSON junto a los demás artefactos de la categoría, versionado igual que el resto del
 pipeline.

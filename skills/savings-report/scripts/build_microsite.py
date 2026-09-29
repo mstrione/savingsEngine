@@ -26,8 +26,10 @@ from pathlib import Path
 
 REQUIRED_TOP_LEVEL = [
     "categoria",
+    "cliente",
+    "total_contratos",
+    "fecha_extraccion",
     "contratos",
-    "productos_servicios",
     "auditoria_contratos",
     "onepager_resumen",
 ]

@@ -11,10 +11,14 @@ un nivel de curación propio del microsite: la auditoría de contratos (`auditor
 taxonomía `tipo` de productos/servicios no existen como tales en el JSON de `contract-ingest` — son
 lectura y clasificación que hace Claude en el chat.
 
-`index_template.html` (`assets/microsite/index_template.html`) es 100% genérico y no cambia entre
-categorías — lee todo de `window.MICROSITE_DATA`. Si en algún momento parece necesario tocar el HTML
-para una categoría puntual, es señal de que falta un campo en este esquema, no de que haya que
-tocar el template.
+**Este documento describe exactamente los campos que `assets/microsite/index_template.html` lee
+del objeto — no una versión idealizada o resumida.** Si en algún momento parece necesario tocar el
+HTML para una categoría puntual, es señal de que falta un campo acá, no de que haya que bifurcar el
+template. (Nota histórica: una versión anterior de este archivo documentaba un esquema más chico y
+plano que nunca coincidió con lo que el template realmente consume — causó un bug real en el
+microsite de "TI y Telecomunicaciones" el 2026-09-29: `undefined` en el header y un
+`TypeError` al ordenar el catálogo. Esta versión se verificó campo por campo contra el `<script>`
+de `index_template.html`.)
 
 ## Regla de reutilización (no negociable)
 
@@ -29,39 +33,84 @@ corre primero, guardá esos mismos campos para reusarlos después en `onepager_s
 
 ```
 window.MICROSITE_DATA = {
-  categoria: string,              // ej. "Transporte de Personal" — usado en document.title
-  contratos: [ {...} ],           // catálogo de contratos, ver abajo
-  productos_servicios: [ {...} ], // catálogo de productos/servicios aplanado, ver abajo
-  auditoria_contratos: {...},     // ver abajo
-  onepager_resumen: {...}         // ver abajo — reusa contenido de onepager_spec.json
+  categoria: string,          // ej. "TI y Telecomunicaciones" — título de página y <h1>
+  cliente: string,            // nombre del cliente — línea "sub" del header
+  total_contratos: number,    // cuenta de contratos — línea "sub" del header ("N contratos")
+  fecha_extraccion: string,   // fecha de la extracción (YYYY-MM-DD o texto libre) — línea "sub"
+  contratos: [ {...} ],       // catálogo de contratos, ver abajo
+  auditoria_contratos: {...}, // ver abajo
+  onepager_resumen: {...}     // ver abajo — reusa contenido de onepager_spec.json
 }
 ```
 
+`categoria`, `cliente`, `total_contratos` y `fecha_extraccion` son las 4 claves que arma la línea
+del header (`D.cliente + ' · ' + D.total_contratos + ' contratos · extracción ' + D.fecha_extraccion`).
+Si falta cualquiera de las 4, el header muestra literalmente `undefined` — no hay fallback en el
+template. `build_microsite.py` las valida como obligatorias de primer nivel.
+
+**No existe un `productos_servicios[]` de primer nivel.** El catálogo de productos/servicios va
+anidado dentro de cada contrato (`contratos[].productos_servicios`, ver abajo) — el template arma
+el buscador aplanado (`flattenProductos()`) leyendo `D.contratos.forEach(c => c.productos_servicios)`,
+nunca `D.productos_servicios`.
+
 ### `contratos[]` — un elemento por contrato
 
-Campos flat, ya como strings de display (no wrapped en `{valor,fuente,confianza}` — esa
-traceabilidad vive en el JSON de `contract-ingest`, no acá; ver nota al final sobre por qué).
+```
+{
+  numero_contrato: string,
+  proveedor: string,
+  alerta: string | null,          // truthy → badge "⚠ Alerta" + caja de alerta en el detalle
+  tiene_modificacion: boolean,    // true → badge "Con modificación"
+  vigencia: {
+    fecha_inicio: string,         // YYYY-MM-DD
+    fecha_fin: string             // YYYY-MM-DD — usado para ordenar el catálogo y calcular días restantes
+  },
+  vigencia_nota: string,          // opcional — se agrega como " — <nota>" junto a la vigencia
+  monto_total: {
+    valor: string,                 // ya formateado/convertido, listo para mostrar (ej. "30.504 MM")
+    moneda: string                 // usado también por el chip-filter de moneda (UF/CLP/USD)
+  },
+  rut_run_proveedor: string,
+  rut_validacion: string,          // resultado de validate_rut.py, texto de display
+  renovacion_automatica: string,
+  termino_anticipado: string,
+  tipo_cambio: string,
+  metodo_pago: string,
+  niveles_servicio: string,
+  clausula_incentivo_desempeno: string,
+  clausula_multa_penalizacion: string,
+  mecanismo_reajuste_indexacion: string,
+  documentos_fuente: [string],     // lista de nombres de archivo, se muestra con <br> entre cada uno
+  notas: string,
+  productos_servicios: [ {...} ]   // catálogo de productos de ESTE contrato, ver abajo — anidado, no top-level
+}
+```
 
-| Campo | Tipo | Descripción |
-|---|---|---|
-| `numero` | string | N° de contrato |
-| `proveedor` | string | Razón social del proveedor |
-| `moneda` | string | Moneda de facturación (para el chip-filter de moneda) |
-| `tipo` | string | Tipo de contrato (para el chip-filter de tipo) — categoría curada, no siempre 1:1 con un campo del JSON crudo |
-| `monto_total_display` | string | Monto ya formateado y convertido, listo para mostrar (ej. "CLP 30.504 MM") |
-| `vigencia_inicio` / `vigencia_fin` | string (YYYY-MM-DD) | Fechas de vigencia — usadas también por `derive_audit_hints.py` para calcular `duracion` |
-| `alerta_vencimiento` | string \| null | Texto de alerta si vence pronto (ej. "Vence en 37 días") — recalculable, no hardcodear una fecha relativa que quede vieja |
-| `resumen` | string | 1-2 líneas de resumen del contrato para la vista de catálogo |
+Todos los campos de texto van ya como strings de display (no wrapped en `{valor,fuente,confianza}`
+— esa trazabilidad vive en el JSON de `contract-ingest`, no acá; ver nota al final). Cualquier
+campo sin dato disponible en el contrato de origen debe llevar `"-"` o `"No especificado"` como
+string — nunca `null`/`undefined`, porque el template no tiene fallback y los imprime tal cual
+(`${c.campo||'-'}` cubre algunos campos, pero no todos — mejor no depender de eso).
 
-### `productos_servicios[]` — catálogo aplanado, cruza contratos
+El filtro de moneda del catálogo lee `c.monto_total.moneda` (no hay un campo `moneda` separado a
+nivel contrato). No hay tampoco un campo `tipo` a nivel contrato para el chip-filter de tipo — ese
+filtro se arma a partir de los `tipo` de `productos_servicios[]` de cada contrato.
 
-| Campo | Tipo | Descripción |
-|---|---|---|
-| `contrato_numero` | string | FK a `contratos[].numero` |
-| `descripcion` | string | Descripción del producto/servicio |
-| `tipo` | string | **Curado a mano** — no se puede derivar mecánicamente del JSON v3 real (confirmado en `datos_v2.js`: el header comment de esa versión ya marcaba este gap explícitamente). Cada categoría nueva requiere que Claude proponga la taxonomía de tipos en el chat. |
-| `cantidad` | string | Cantidad/volumen, tal como aparece en el contrato |
-| `costo_unitario_display` | string | Costo unitario ya formateado |
+### `contratos[].productos_servicios[]` — catálogo de productos, anidado por contrato
+
+```
+{
+  tipo: string,            // curado a mano — no derivable mecánicamente del JSON v3 real; cada
+                            // categoría nueva requiere que Claude proponga la taxonomía en el chat
+  descripcion: string,
+  cantidad: string,        // tal como aparece en el contrato
+  costo_unitario: string,  // ya formateado
+  moneda: string           // opcional — se muestra entre paréntesis junto al costo unitario
+}
+```
+
+El buscador de productos (`flattenProductos()`) le agrega automáticamente `proveedor`,
+`numero_contrato` y `alerta` a cada producto aplanado — no hace falta repetirlos acá.
 
 ### `auditoria_contratos` — sección "op-audit", curada
 
@@ -72,23 +121,30 @@ auditoria_contratos: {
   hallazgo_principal: string, // el "so-what" de la auditoría — curada, análoga al headline del one-pager
   filas: [
     {
-      contrato_numero: string,       // FK a contratos[].numero
-      duracion: string,              // MECÁNICO — derivable de vigencia_inicio/vigencia_fin (derive_audit_hints.py)
-      incentivos: "Sí" | "No",       // MECÁNICO — derivable si el texto de cláusula empieza con "sí"/"no" (case/tilde-insensitive)
-      penalidades: "Sí" | "No",      // ídem
-      reajuste_indexacion: "Sí" | "No", // ídem
-      compromiso_volumen_sla: string, // CURADO — síntesis, no mecánico
-      hallazgo_principal_fila: string // CURADO — juicio analítico por contrato
+      contrato_numero: string,       // FK a contratos[].numero_contrato — MECÁNICO
+      proveedor: string,             // MECÁNICO — copia directa de contratos[].proveedor
+      duracion: string,              // MECÁNICO — derivable de vigencia.fecha_inicio/fecha_fin (derive_audit_hints.py)
+      modalidad_pago: string,        // MECÁNICO — copia directa de metodo_pago.valor del JSON crudo
+      incentivos: "Sí" | "No" | "No especificado",       // MECÁNICO
+      penalidades: "Sí" | "No" | "No especificado",      // MECÁNICO
+      reajuste_indexacion: "Sí" | "No" | "No especificado", // MECÁNICO
+      compromiso_volumen_sla: string, // CURADO — síntesis de niveles_servicio, no mecánico
+      hallazgo_principal_fila: string // CURADO — juicio analítico por contrato (ver nota abajo)
     }
   ]
 }
 ```
 
-La distinción mecánico/curado no es cosmética: `derive_audit_hints.py` completa `duracion` y los
-tres campos Sí/No a partir del JSON de `contract-ingest` (ver script), dejando
-`compromiso_volumen_sla` y `hallazgo_principal_fila` como placeholders `"TODO"` que Claude debe
-completar en el chat leyendo las cláusulas reales — nunca inventarlos ni dejarlos en `"TODO"` en la
-entrega final.
+`derive_audit_hints.py` completa `contrato_numero`, `proveedor`, `duracion`, `modalidad_pago` y los
+tres campos Sí/No a partir del JSON de `contract-ingest`, dejando `compromiso_volumen_sla` y
+`hallazgo_principal_fila` como placeholders `"TODO"` que Claude debe completar en el chat leyendo
+las cláusulas reales — nunca inventarlos ni dejarlos en `"TODO"` en la entrega final.
+
+**Nota conocida:** `index_template.html` no renderiza actualmente `hallazgo_principal_fila` en
+ninguna celda de la tabla de auditoría (solo se usa `hallazgo_principal` a nivel de sección, no por
+fila). El campo se sigue derivando/curando por paridad con el resto del esquema y por si se agrega
+esa columna más adelante, pero hoy es un campo "vivo" sin efecto visual — no es un bug, es una
+brecha de diseño pendiente (ver `docs/ARQUITECTURA.md`, extensiones futuras).
 
 ### `onepager_resumen` — reusa contenido de `category-onepager`
 
@@ -106,6 +162,11 @@ onepager_resumen: {
 }
 ```
 
+`vencimientos[].contratos` es un string tipo `"1234 / 5678"` (varios números separados por ` / `) —
+el template toma el primero (`.split('/')[0].trim()`) para buscar ese contrato en `D.contratos` y
+calcular los días restantes en vivo. Si el primer número no matchea exactamente un
+`contratos[].numero_contrato`, esa fila muestra "-" en días restantes sin romper nada más.
+
 `left_items[].icon` se conserva en el esquema por paridad con `onepager_spec.json`, pero
 `index_template.html` lo ignora al renderizar (usa solo un punto de color, no el ícono) — no hace
 falta que el ícono exista en `assets/icons/` de `bcg-slide-generator` para que el microsite
@@ -114,16 +175,18 @@ funcione, solo para el PPTX.
 ## Por qué esto no está wrapped en `{valor, fuente, confianza}`
 
 El JSON "ideal" de `contract-ingest` (`../../contract-ingest/references/schema.md`) envuelve casi
-todo en objetos de trazabilidad. Este esquema no lo hace, por la misma razón que `datos_v2.js` real
-tampoco lo hacía: el microsite es una vista de **display**, no el registro de trazabilidad — la
-trazabilidad vive en el JSON de `contract-ingest` (fuente de verdad) y en el `footnote` del
-one-pager, no en cada campo del microsite. Envolver cada campo acá sería redundante y complicaría
-el template sin aportar valor al usuario final del buscador.
+todo en objetos de trazabilidad. Este esquema no lo hace: el microsite es una vista de **display**,
+no el registro de trazabilidad — la trazabilidad vive en el JSON de `contract-ingest` (fuente de
+verdad) y en el `footnote` del one-pager, no en cada campo del microsite. Envolver cada campo acá
+sería redundante y complicaría el template sin aportar valor al usuario final del buscador.
 
 ## Ver también
 
 - `../../category-onepager/references/onepager_spec.md` — esquema del spec del one-pager PPTX;
   varios campos de `onepager_resumen` se copian literal de ahí.
-- `../assets/microsite/index_template.html` — el HTML genérico que consume este objeto.
+- `../assets/microsite/index_template.html` — el HTML genérico que consume este objeto; es la
+  fuente de verdad de este documento — ante cualquier duda, lo que lee el `<script>` ahí manda.
 - `../scripts/derive_audit_hints.py` — deriva los campos mecánicos de `auditoria_contratos.filas[]`.
-- `../scripts/build_microsite.py` — empaqueta un `microsite_data.json` autorado en `datos_vN.js`.
+- `../scripts/build_microsite.py` — empaqueta un `microsite_data.json` autorado en `datos_vN.js`;
+  valida presencia de `categoria`, `cliente`, `total_contratos`, `fecha_extraccion`, `contratos`,
+  `auditoria_contratos`, `onepager_resumen` como claves de primer nivel.

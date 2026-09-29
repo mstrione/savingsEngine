@@ -6,7 +6,10 @@ a partir del JSON consolidado de `contract-ingest` (esquema real v3,
 `skills/contract-ingest/references/schema.md`).
 
 Qué deriva mecánicamente (sin juicio de Claude):
+- `contrato_numero`, `proveedor`: copia directa de `numero_contrato` / `proveedor` del contrato.
 - `duracion`: a partir de `vigencia.fecha_inicio.valor` / `vigencia.fecha_fin.valor` (ISO).
+- `modalidad_pago`: copia directa de `metodo_pago.valor` ("No especificado" si viene vacío) —
+  es texto libre, no un enum Sí/No, así que no pasa por `normalize_si_no()`.
 - `incentivos`, `penalidades`, `reajuste_indexacion`: a partir de
   `clausula_incentivo_desempeno.valor`, `clausula_multa_penalizacion.valor`,
   `mecanismo_reajuste_indexacion.valor`. El esquema v3 ya los define como enum "Sí"/"No", así que
@@ -92,10 +95,13 @@ def derive_row(contrato: dict) -> dict:
     incentivo = (contrato.get("clausula_incentivo_desempeno") or {}).get("valor")
     multa = (contrato.get("clausula_multa_penalizacion") or {}).get("valor")
     reajuste = (contrato.get("mecanismo_reajuste_indexacion") or {}).get("valor")
+    metodo_pago = (contrato.get("metodo_pago") or {}).get("valor")
 
     return {
         "contrato_numero": contrato.get("numero_contrato", "No especificado"),
+        "proveedor": contrato.get("proveedor", "No especificado"),
         "duracion": format_duracion(fecha_inicio, fecha_fin),
+        "modalidad_pago": metodo_pago if metodo_pago else "No especificado",
         "incentivos": normalize_si_no(incentivo),
         "penalidades": normalize_si_no(multa),
         "reajuste_indexacion": normalize_si_no(reajuste),

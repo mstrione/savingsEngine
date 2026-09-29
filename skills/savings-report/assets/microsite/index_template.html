@@ -482,7 +482,7 @@ function renderOnepager(){
   }).join('');
   document.getElementById('auditTableBody').innerHTML = A.filas.map(f=>`
     <tr>
-      <td class="contrato">${f.numero_contrato}<br><span style="font-weight:400;color:var(--gray);">${f.proveedor}</span></td>
+      <td class="contrato">${f.contrato_numero}<br><span style="font-weight:400;color:var(--gray);">${f.proveedor}</span></td>
       <td>${f.duracion}</td>
       <td>${f.modalidad_pago}</td>
       <td>${f.compromiso_volumen_sla}</td>
